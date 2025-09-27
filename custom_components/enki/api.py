@@ -112,6 +112,8 @@ class API:
                     LOGGER.debug("get_items_in_section_for_home : " + str(response))
                     for section in response["sections"]:
                         for item in section["items"]:
+                            if 'scenarioId' in item["metadata"].keys():
+                                continue
                             device = {
                                 "homeId": home_id,
                                 "deviceId": item["metadata"]["deviceId"],
