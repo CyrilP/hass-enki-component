@@ -63,7 +63,7 @@ class API:
                         self._access_token = response["access_token"]
                         self._refresh_token = response["refresh_token"]
                         self._token_type = response["token_type"]
-                        tokenExpiresTime = time.time() + response["expires_in"]*1000
+                        tokenExpiresTime = time.time() + response["expires_in"]
                         self._tokenExpiresTime = tokenExpiresTime
                         return True
                     else:
