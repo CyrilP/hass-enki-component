@@ -95,7 +95,7 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
     def is_on(self) -> bool | None:
         """Return if the binary sensor is on."""
         # This needs to enumerate to true or false
-        last_reported_values = self.coordinator.get_device_parameter(self.device_id, "lastReportedValue")
+        last_reported_values = self.coordinator.get_device_parameter(self.node_id, "lastReportedValue")
         return (
             last_reported_values["power"] == "ON"
         )
@@ -110,30 +110,30 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
             value = round(ha_value / (255/self.BRIGHTNESS_SCALE[1]), 2)
             LOGGER.debug(f"setting brightness value to {ha_value} => {value}")
             await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "brightness", value)
-            self.coordinator.update_data(self.device_id, "lastReportedValue", "brightness", value)
+            self.coordinator.update_data(self.node_id, "lastReportedValue", "brightness", value)
         elif "color_temp_kelvin" in kwargs:
             ha_value = kwargs["color_temp_kelvin"]
             value = self.closest_temp_value(ha_value)
             LOGGER.debug("setting color temp to closest value : " + str(ha_value) + " => " + str(value))
             await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "colorTemperature", "T" + str(value) + "K")
-            self.coordinator.update_data(self.device_id, "lastReportedValue", "colorTemperature", "T" + str(value) + "K")
+            self.coordinator.update_data(self.node_id, "lastReportedValue", "colorTemperature", "T" + str(value) + "K")
         else:
             await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "power", "ON")
-            self.coordinator.update_data(self.device_id, "lastReportedValue", "power", "ON")
+            self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "ON")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "power", "OFF")
-        self.coordinator.update_data(self.device_id, "lastReportedValue", "power", "OFF")
+        self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "OFF")
 
     @property
     def brightness(self) -> Optional[int]:
         """Return the current brightness."""
-        last_reported_values = self.coordinator.get_device_parameter(self.device_id, "lastReportedValue")
+        last_reported_values = self.coordinator.get_device_parameter(self.node_id, "lastReportedValue")
         return last_reported_values["brightness"]*(255/self.BRIGHTNESS_SCALE[1])
     
     @property
     def color_temp_kelvin(self) -> int | None:
         """Return the color temperature in Kelvin."""
-        last_reported_values = self.coordinator.get_device_parameter(self.device_id, "lastReportedValue")
+        last_reported_values = self.coordinator.get_device_parameter(self.node_id, "lastReportedValue")
         return int(last_reported_values["colorTemperature"][1:-1])

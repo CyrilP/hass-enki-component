@@ -68,7 +68,7 @@ class EnkiCoordinator(DataUpdateCoordinator):
     # These will be specific to your api or yo may not need them at all
     # ----------------------------------------------------------------------------
     def get_device(self, device_id: int) -> dict[str, Any]:
-        """Get a device entity from our api data."""
+        """Get a device entity from our api data using the device_id."""
         try:
             return [
                 devices for devices in self.data if devices["deviceId"] == device_id
@@ -77,16 +77,27 @@ class EnkiCoordinator(DataUpdateCoordinator):
             # In this case if the device id does not exist you will get an IndexError.
             # If api did not return any data, you will get TypeError.
             return None
+        
+    def get_node(self, node_id: int) -> dict[str, Any]:
+        """Get a device entity from our api data using the node_id."""
+        try:
+            return [
+                devices for devices in self.data if devices["nodeId"] == node_id
+            ][0]
+        except (TypeError, IndexError):
+            # In this case if the device id does not exist you will get an IndexError.
+            # If api did not return any data, you will get TypeError.
+            return None
 
-    def get_device_parameter(self, device_id: int, parameter: str) -> Any:
+    def get_device_parameter(self, node_id: int, parameter: str) -> Any:
         """Get the parameter value of one of our devices from our api data."""
-        if device := self.get_device(device_id):
+        if device := self.get_node(node_id):
             return device.get(parameter)
     
-    def update_data(self, device_id:int, parentKey: str, key:str, value):
+    def update_data(self, node_id:int, parentKey: str, key:str, value):
         """Update device attribute"""
         # trick to force data value, refreshing after posting data update needs too much time to update
-        device = self.get_device(device_id)
+        device = self.get_node(node_id)
         if parentKey is None:
             device[key] = value
         else:

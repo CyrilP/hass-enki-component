@@ -21,8 +21,8 @@ proxy = None
 class Device:
     """API device."""
     home_id: str
-    device_id: str
-    node_id: str
+    device_id: str #device_id represents the type of device used (Hw reference)
+    node_id: str #node_id represents the physical device (toke,)
     device_name: str
 
 class API:

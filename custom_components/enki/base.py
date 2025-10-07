@@ -50,8 +50,9 @@ class EnkiBaseEntity(CoordinatorEntity):
         """Initialise entity."""
         super().__init__(coordinator)
         self.device = device
+        self.node_id = device["nodeId"]
         self.device_id = device["deviceId"]
-        self.parameter = self.coordinator.get_device_parameter(self.device_id, "deviceName")
+        self.parameter = self.coordinator.get_device_parameter(self.node_id, "deviceName")
 
     @property
     def available(self) -> bool:
@@ -62,11 +63,11 @@ class EnkiBaseEntity(CoordinatorEntity):
     def _handle_coordinator_update(self) -> None:
         """Update sensor with latest data from coordinator."""
         # This method is called by your DataUpdateCoordinator when a successful update runs.
-        self.device = self.coordinator.get_device(self.device_id)
+        self.device = self.coordinator.get_node(self.node_id)
         _LOGGER.debug(
             "Updating device: %s, %s",
-            self.device_id,
-            self.coordinator.get_device_parameter(self.device_id, "deviceName"),
+            self.node_id,
+            self.coordinator.get_device_parameter(self.node_id, "deviceName"),
         )
         self.async_write_ha_state()
 
@@ -85,20 +86,20 @@ class EnkiBaseEntity(CoordinatorEntity):
         # and a device uuid, mac address or some other unique attribute.
         # ----------------------------------------------------------------------------
         return DeviceInfo(
-            name=self.coordinator.get_device_parameter(self.device_id, "deviceName"),
-            manufacturer=self.coordinator.get_device_parameter(self.device_id, "manufacturerId"),
+            name=self.coordinator.get_device_parameter(self.node_id, "deviceName"),
+            manufacturer=self.coordinator.get_device_parameter(self.node_id, "manufacturerId"),
             model=str(
-                self.coordinator.get_device_parameter(self.device_id, "modelNumber")
+                self.coordinator.get_device_parameter(self.node_id, "modelNumber")
             )
             .replace("_", " ")
             .title(),
             sw_version=self.coordinator.get_device_parameter(
-                self.device_id, "version"
+                self.node_id, "version"
             ),
             identifiers={
                 (
                     DOMAIN,
-                    self.coordinator.get_device_parameter(self.device_id, "deviceId"),
+                    self.coordinator.get_device_parameter(self.node_id, "node_Id"),
                 )
             },
         )
@@ -133,4 +134,4 @@ class EnkiBaseEntity(CoordinatorEntity):
         #
         # This is even more important if your integration supports multiple instances.
         # ----------------------------------------------------------------------------
-        return f"{DOMAIN}-{self.coordinator.get_device_parameter(self.device_id, "deviceId")}-{self.parameter}"
+        return f"{DOMAIN}-{self.coordinator.get_device_parameter(self.node_id, "nodeId")}-{self.parameter}"
