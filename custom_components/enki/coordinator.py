@@ -82,7 +82,7 @@ class EnkiCoordinator(DataUpdateCoordinator):
         """Get a device entity from our api data using the node_id."""
         try:
             return [
-                devices for devices in self.data if devices["nodeId"] == node_id_id
+                devices for devices in self.data if devices["nodeId"] == node_id
             ][0]
         except (TypeError, IndexError):
             # In this case if the device id does not exist you will get an IndexError.
