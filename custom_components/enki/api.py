@@ -112,6 +112,8 @@ class API:
                     LOGGER.debug("get_items_in_section_for_home : " + str(response))
                     for section in response["sections"]:
                         for item in section["items"]:
+                            if 'deviceId' not in item["metadata"].keys():
+                                continue
                             device = {
                                 "homeId": home_id,
                                 "deviceId": item["metadata"]["deviceId"],
@@ -150,12 +152,12 @@ class API:
         """Get details on a node."""
         await self.check_connected()
         async with aiohttp.ClientSession() as session, session.request(
-             method="GET",
-             url=f"{ENKI_URL}/api-enki-node-agg-prod/v1/nodes/{node_id}",
-             headers={"Authorization": f"{self._token_type} {self._access_token}",
-                      "X-Gateway-APIKey": ENKI_NODE_API_KEY,
-                      "homeId": f"{home_id}"},
-             proxy=proxy,) as resp:
+            method="GET",
+            url=f"{ENKI_URL}/api-enki-node-agg-prod/v1/nodes/{node_id}",
+            headers={"Authorization": f"{self._token_type} {self._access_token}",
+                    "X-Gateway-APIKey": ENKI_NODE_API_KEY,
+                    "homeId": f"{home_id}"},
+            proxy=proxy,) as resp:
 
                 if resp.status == 200:
                     response = await resp.json()
@@ -170,11 +172,11 @@ class API:
         """Get details on a device."""
         await self.check_connected()
         async with aiohttp.ClientSession() as session, session.request(
-             method="GET",
-             url=f"{ENKI_URL}/api-enki-referentiel-agg-prod/v1/devices/{id}?version=2.15.0",
-             headers={"Authorization": f"{self._token_type} {self._access_token}",
-                      "X-Gateway-APIKey": ENKI_REFERENTIEL_API_KEY},
-             proxy=proxy,) as resp:
+            method="GET",
+            url=f"{ENKI_URL}/api-enki-referentiel-agg-prod/v1/devices/{id}?version=2.15.0",
+            headers={"Authorization": f"{self._token_type} {self._access_token}",
+                    "X-Gateway-APIKey": ENKI_REFERENTIEL_API_KEY},
+            proxy=proxy,) as resp:
 
                 if resp.status == 200:
                     response = await resp.json()
