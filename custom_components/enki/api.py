@@ -112,7 +112,7 @@ class API:
                     LOGGER.debug("get_items_in_section_for_home : " + str(response))
                     for section in response["sections"]:
                         for item in section["items"]:
-                            if not('deviceId' in item["metadata"].keys()):
+                            if 'deviceId' not in item["metadata"].keys():
                                 continue
                             device = {
                                 "homeId": home_id,
