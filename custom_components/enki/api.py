@@ -67,6 +67,7 @@ class API:
                         self._tokenExpiresTime = tokenExpiresTime
                         return True
                     else:
+                        LOGGER.error("Error connecting to api. status %s, response %s", resp.status, str(response))
                         raise APIAuthError("Error connecting to api. Invalid username or password.")
         except Exception as e:
             raise APIConnectionError("Error connecting to api : " + repr(e))
@@ -90,6 +91,7 @@ class API:
                         homes.append(home["id"])
                     return homes
                 else:
+                    LOGGER.error("Error on get_homes. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
     def merge_properties(self, device, properties):
@@ -136,6 +138,7 @@ class API:
                     return devices
                   
                 else:
+                    LOGGER.error("Error on get_items_in_section_for_home. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
     async def refresh_device(self, device): 
@@ -166,6 +169,7 @@ class API:
                     return response
 
                 else:
+                    LOGGER.error("Error on get_node. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
     async def get_device(self, id):
@@ -184,6 +188,7 @@ class API:
                     return response
 
                 else:
+                    LOGGER.error("Error on get_device. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
     async def get_light_details(self,home_id, node_id):
@@ -203,6 +208,7 @@ class API:
                     return response
 
                 else:
+                    LOGGER.error("Error on get_light_details. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
     async def change_light_state(self, home_id, node_id, parameter, value):
@@ -223,7 +229,7 @@ class API:
                 if resp.status != 202:
                     response = await resp.json()
                     LOGGER.debug(resp.status)
-                    LOGGER.debug(response)
+                    LOGGER.error("Error on change_light_state. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
 # *******************************************************
