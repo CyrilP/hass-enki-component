@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
 from homeassistant.core import DOMAIN, HomeAssistant
@@ -25,8 +26,8 @@ class EnkiCoordinator(DataUpdateCoordinator):
         self.user = config_entry.data[CONF_USERNAME]
         self.pwd = config_entry.data[CONF_PASSWORD]
 
-        # set variables from options.  You need a default here incase options have not been set
-        self.poll_interval = DEFAULT_SCAN_INTERVAL
+        # read polling interval from config entry data, falling back to default
+        self.poll_interval = config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
         # Initialise DataUpdateCoordinator
         super().__init__(
@@ -102,4 +103,17 @@ class EnkiCoordinator(DataUpdateCoordinator):
             device[key] = value
         else:
             device[parentKey][key] = value
+        self.async_set_updated_data(self.data)
+
+    def update_endpoint_power(self, node_id: int, endpoint_id: int, power: str) -> None:
+        """Optimistically update power state for a specific electricalEndpoints entry."""
+        device = self.get_node(node_id)
+        endpoints = device.get("electricalEndpoints")
+        if isinstance(endpoints, list):
+            for ep in endpoints:
+                if not isinstance(ep, dict):
+                    continue
+                if ep.get("id") == endpoint_id:
+                    ep["lastReportedValue"] = power
+                    break
         self.async_set_updated_data(self.data)

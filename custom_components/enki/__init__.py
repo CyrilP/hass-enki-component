@@ -14,9 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .coordinator import EnkiCoordinator
 
 #PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
-PLATFORMS: list[Platform] = [Platform.LIGHT]
-
-type EnkiConfigEntry = ConfigEntry[RuntimeData]
+PLATFORMS: list[Platform] = [Platform.LIGHT, Platform.FAN]
 
 
 @dataclass
@@ -24,6 +22,9 @@ class RuntimeData:
     """Class to hold your data."""
 
     coordinator: DataUpdateCoordinator
+
+
+EnkiConfigEntry = ConfigEntry[RuntimeData]
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: EnkiConfigEntry) -> bool:
