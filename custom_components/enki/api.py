@@ -6,7 +6,6 @@ import aiohttp
 import asyncio
 import logging
 from dataclasses import dataclass
-from collections.abc import Awaitable, Callable
 from typing import Any
 import time
 
@@ -39,12 +38,6 @@ class API:
         """Initialise."""
         self.user = user
         self.pwd = pwd
-        self._type_refreshers: dict[str, Callable[[dict[str, Any]], Awaitable[None]]] = {
-            "lights": self._refresh_lights_device,
-        }
-        self._device_type_refreshers: dict[str, Callable[[dict[str, Any]], Awaitable[None]]] = {
-            "ceiling_fans": self._refresh_ceiling_fan_device,
-        }
 
     @property
     def controller_name(self) -> str:
@@ -175,13 +168,30 @@ class API:
         if not device.get("isEnabled"):
             return device
 
-        type_refresher = self._type_refreshers.get(device.get("type"))
-        if type_refresher is not None:
-            await type_refresher(device)
+        capabilities = _capabilities_set(device)
+        possible_values = _possible_values_dict(device)
 
-        device_type_refresher = self._device_type_refreshers.get(device.get("deviceType"))
-        if device_type_refresher is not None:
-            await device_type_refresher(device)
+        if _supports_light_state(capabilities, possible_values):
+            await self._refresh_lights_device(device)
+
+        if _supports_electrical_power(capabilities, possible_values):
+            power_details = await self.get_electrical_power_details(device.get("homeId"), device.get("nodeId"))
+            self.merge_properties(device, {
+                "electricalPower": power_details.get("lastReportedValue"),
+                "electricalEndpoints": power_details.get("endpoints", []),
+            })
+
+        if _supports_fan_speed(capabilities, possible_values):
+            fan_speed = await self.get_fan_speed(device.get("homeId"), device.get("nodeId"))
+            self.merge_properties(device, {"fanSpeed": fan_speed})
+
+        if _supports_fan_rotation_direction(capabilities, possible_values):
+            fan_rotation = await self.get_fan_rotation_direction(device.get("homeId"), device.get("nodeId"))
+            self.merge_properties(device, {"fanRotationDirection": fan_rotation})
+
+        if _supports_airflow_mode(capabilities, possible_values):
+            airflow_mode = await self.get_airflow_mode(device.get("homeId"), device.get("nodeId"))
+            self.merge_properties(device, {"airflowMode": airflow_mode})
 
         return device
 
@@ -189,25 +199,6 @@ class API:
         """Refresh state for standard light devices."""
         light_details = await self.get_light_details(device.get("homeId"), device.get("nodeId"))
         self.merge_properties(device, light_details)
-
-    async def _refresh_ceiling_fan_device(self, device: dict[str, Any]) -> None:
-        """Refresh light, power and airflow state for ceiling fan devices."""
-        await self._refresh_lights_device(device)
-
-        power_details = await self.get_electrical_power_details(device.get("homeId"), device.get("nodeId"))
-        self.merge_properties(device, {
-            "electricalPower": power_details.get("lastReportedValue"),
-            "electricalEndpoints": power_details.get("endpoints", []),
-        })
-
-        fan_speed = await self.get_fan_speed(device.get("homeId"), device.get("nodeId"))
-        fan_rotation = await self.get_fan_rotation_direction(device.get("homeId"), device.get("nodeId"))
-        airflow_mode = await self.get_airflow_mode(device.get("homeId"), device.get("nodeId"))
-        self.merge_properties(device, {
-            "fanSpeed": fan_speed,
-            "fanRotationDirection": fan_rotation,
-            "airflowMode": airflow_mode,
-        })
 
     async def get_node(self, home_id, node_id):
         """Get details on a node."""
@@ -349,12 +340,10 @@ class API:
             LOGGER.error("Error on power check. status %s, response %s", resp.status, str(response))
             raise ValueError("bad credentials")
 
-    async def switch_electrical_power(self, home_id, node_id, value, endpoint_ids=None):
-        """Switch electrical power globally or for specific endpoints."""
+    async def switch_electrical_power(self, home_id, node_id, value):
+        """Switch electrical power globally."""
         await self.check_connected()
         payload = {"value": value}
-        if endpoint_ids:
-            payload["endpoints"] = [{"id": endpoint_id} for endpoint_id in endpoint_ids]
 
         before_state = None
         if LOGGER.isEnabledFor(logging.DEBUG):
@@ -461,3 +450,71 @@ class APIAuthError(Exception):
 
 class APIConnectionError(Exception):
     """Exception class for connection error."""
+
+
+def _capabilities_set(device: dict[str, Any]) -> set[str]:
+    """Return capabilities as a normalized string set."""
+    capabilities = device.get("capabilities")
+    if isinstance(capabilities, list):
+        return {capability for capability in capabilities if isinstance(capability, str)}
+    if isinstance(capabilities, dict):
+        return set(capabilities.keys())
+    return set()
+
+
+def _possible_values_dict(device: dict[str, Any]) -> dict[str, Any]:
+    """Return possibleValues metadata as a dict if available."""
+    possible_values = device.get("possibleValues")
+    if isinstance(possible_values, dict):
+        return possible_values
+    return {}
+
+
+def _supports_light_state(capabilities: set[str], possible_values: dict[str, Any]) -> bool:
+    """Tell whether light state check/change exists in metadata."""
+    return (
+        "change_light_state" in capabilities
+        or "check_light_state" in capabilities
+        or "change_light_state" in possible_values
+        or "check_light_state" in possible_values
+    )
+
+
+def _supports_electrical_power(capabilities: set[str], possible_values: dict[str, Any]) -> bool:
+    """Tell whether electrical power check/change exists in metadata."""
+    return (
+        "switch_electrical_power" in capabilities
+        or "check_electrical_power" in capabilities
+        or "switch_electrical_power" in possible_values
+        or "check_electrical_power" in possible_values
+    )
+
+
+def _supports_fan_speed(capabilities: set[str], possible_values: dict[str, Any]) -> bool:
+    """Tell whether fan speed control exists in metadata."""
+    return (
+        "change_fan_speed" in capabilities
+        or "check_fan_speed" in capabilities
+        or "change_fan_speed" in possible_values
+        or "check_fan_speed" in possible_values
+    )
+
+
+def _supports_fan_rotation_direction(capabilities: set[str], possible_values: dict[str, Any]) -> bool:
+    """Tell whether fan rotation direction exists in metadata."""
+    return (
+        "change_fan_rotation_direction" in capabilities
+        or "check_fan_rotation_direction" in capabilities
+        or "change_fan_rotation_direction" in possible_values
+        or "check_fan_rotation_direction" in possible_values
+    )
+
+
+def _supports_airflow_mode(capabilities: set[str], possible_values: dict[str, Any]) -> bool:
+    """Tell whether airflow mode exists in metadata."""
+    return (
+        "change_airflow_mode" in capabilities
+        or "check_airflow_mode" in capabilities
+        or "change_airflow_mode" in possible_values
+        or "check_airflow_mode" in possible_values
+    )
