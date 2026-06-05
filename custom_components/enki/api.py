@@ -141,7 +141,7 @@ class API:
                                     endpoint.get("id")
                                     for endpoint in item["metadata"].get("mainChangeCapability", {}).get("endpoints", [])
                                     if endpoint.get("id") is not None
-                                ],
+                                ] if item["metadata"].get("mainChangeCapability") is not None else [],
                                 "deviceName": item["title"]["label"],
                                 "state": item["state"],
                                 "isEnabled": item["isEnabled"]
