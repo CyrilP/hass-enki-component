@@ -120,6 +120,19 @@ class API:
             if prop != "id":
                 device[prop] = properties[prop]
 
+    @staticmethod
+    def _parse_bff_power(description: dict[str, Any] | None) -> float | None:
+        """Parse power value from BFF description.value (e.g. '109 W' -> 109.0)."""
+        if not description or not isinstance(description, dict):
+            return None
+        value_str = description.get("value")
+        if not isinstance(value_str, str):
+            return None
+        try:
+            return float(value_str.split()[0])
+        except (ValueError, IndexError):
+            return None
+
     async def get_items_in_section_for_home(self, home_id) -> list[dict[str, Any]]:
             """Get sections in home."""
             await self.check_connected()
@@ -146,12 +159,13 @@ class API:
                                 "mainCheckCapabilityId": item["metadata"].get("mainCheckCapabilityId"),
                                 "mainChangeCapabilityEndpoints": [
                                     endpoint.get("id")
-                                    for endpoint in item["metadata"].get("mainChangeCapability", {}).get("endpoints", [])
+                                    for endpoint in (item["metadata"].get("mainChangeCapability") or {}).get("endpoints", [])
                                     if endpoint.get("id") is not None
                                 ],
                                 "deviceName": item["title"]["label"],
                                 "state": item["state"],
-                                "isEnabled": item["isEnabled"]
+                                "isEnabled": item["isEnabled"],
+                                "powerProduction": self._parse_bff_power(item.get("description")),
                             }
                             devices.append(device)
 

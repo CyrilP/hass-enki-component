@@ -14,7 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .coordinator import EnkiCoordinator
 
 #PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
-PLATFORMS: list[Platform] = [Platform.LIGHT, Platform.FAN]
+PLATFORMS: list[Platform] = [Platform.LIGHT, Platform.FAN, Platform.SENSOR]
 
 
 @dataclass

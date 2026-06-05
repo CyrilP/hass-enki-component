@@ -81,6 +81,9 @@ async def _run_live_api_check(user: str, password: str) -> None:
         elif _is_normal_light_device(device):
             home_id = device.get("homeId")
             await _print_normal_light_details(api, home_id, node_id)
+        elif _is_inverter_device(device):
+            home_id = device.get("homeId")
+            await _print_inverter_endpoint_details(api, home_id, node_id)
 
 
 def _is_normal_light_device(device: dict[str, Any]) -> bool:
@@ -95,6 +98,19 @@ def _is_normal_light_device(device: dict[str, Any]) -> bool:
     return isinstance(capabilities, list) and (
         "check_light_state" in capabilities or "change_light_state" in capabilities
     )
+
+
+def _is_inverter_device(device: dict[str, Any]) -> bool:
+    """Detect inverter devices."""
+    return device.get("type") == "inverters" or device.get("deviceType") == "inverters"
+
+
+async def _print_inverter_endpoint_details(api: Any, home_id: str, node_id: str) -> None:
+    """Print power production from BFF data for inverter devices."""
+    print("\n   --- inverter production data (from BFF) ---")
+    # Power is now extracted from the BFF dashboard description.value
+    # It's already in the device dict from get_devices()
+    print("   (power data is extracted from BFF dashboard, not a separate API)")
 
 
 async def _print_normal_light_details(api: Any, home_id: str, node_id: str) -> None:
@@ -168,7 +184,7 @@ async def _print_ceiling_fan_endpoint_details(api: Any, home_id: str, node_id: s
 
                 node = find_node(body, node_id)
                 if node:
-                    cap = node.get("mainChangeCapability", {})
+                    cap = node.get("mainChangeCapability") or {}
                     eps = cap.get("endpoints", [])
                     print(f"   mainChangeCapabilityId={node.get('mainChangeCapabilityId')}")
                     print(f"   endpoints exposed by BFF: {[ep['id'] for ep in eps]}")
@@ -210,6 +226,8 @@ def main() -> int:
     try:
         _run_async(_run_live_api_check(args.user, args.password))
     except Exception as exc:  # pragma: no cover - defensive path for runtime diagnostics script
+        import traceback
+        traceback.print_exc()
         print(f"Error running live diagnostics: {exc}")
         return 1
 
