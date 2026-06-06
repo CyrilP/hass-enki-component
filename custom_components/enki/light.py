@@ -72,6 +72,14 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         if "change_hue" in capabilities or "change_saturation" in capabilities:
             self._attr_supported_color_modes.add(ColorMode.HS)
             self._attr_color_mode = ColorMode.HS
+            if "possibleValues" in device and "change_hue" in device["possibleValues"]:
+                min_value = device["possibleValues"]["change_hue"]["range"]["min"]
+                max_value = device["possibleValues"]["change_hue"]["range"]["max"]
+                self.HUE_SCALE = (min_value, max_value)
+            if "possibleValues" in device and "change_saturation" in device["possibleValues"]:
+                min_value = device["possibleValues"]["change_saturation"]["range"]["min"]
+                max_value = device["possibleValues"]["change_saturation"]["range"]["max"]
+                self.SATURATION_SCALE = (min_value, max_value)
 
         if "change_color_temperature" in capabilities:
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
@@ -272,8 +280,6 @@ def _build_light_entities(coordinator: EnkiCoordinator, device: dict[str, Any]) 
     """Create light entities from power capability and BFF endpoint metadata."""
     if not _has_switch_electrical_power(device):
         return []
-
-    if device['type'] != 'lights': return []
 
     endpoint_ids = _main_change_capability_endpoint_ids(device)
     if endpoint_ids:
