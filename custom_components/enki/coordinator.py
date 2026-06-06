@@ -95,14 +95,24 @@ class EnkiCoordinator(DataUpdateCoordinator):
         if device := self.get_node(node_id):
             return device.get(parameter)
     
-    def update_data(self, node_id:int, parentKey: str, key:str, value):
-        """Update device attribute"""
-        # trick to force data value, refreshing after posting data update needs too much time to update
+    def update_data(self, node_id: int, updated_values: dict[str, Any]) -> None:
+        """Update device attribute.
+
+        Support nested dictionaries so we can merge dict of dict updates into
+        the existing device data.
+        """
         device = self.get_node(node_id)
-        if parentKey is None:
-            device[key] = value
-        else:
-            device[parentKey][key] = value
+        if not isinstance(device, dict):
+            return
+
+        def _merge_dicts(target: dict[str, Any], updates: dict[str, Any]) -> None:
+            for key, value in updates.items():
+                if isinstance(value, dict) and isinstance(target.get(key), dict):
+                    _merge_dicts(target[key], value)
+                else:
+                    target[key] = value
+
+        _merge_dicts(device, updated_values)
         self.async_set_updated_data(self.data)
 
     def update_endpoint_power(self, node_id: int, endpoint_id: int, power: str) -> None:

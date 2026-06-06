@@ -151,7 +151,7 @@ class API:
                             node_info = await self.get_node(home_id, device.get("nodeId"))
                             self.merge_properties(device, node_info)
 
-                            await self.refresh_device(device)
+                            await self.refresh_node(device)
 
                             LOGGER.debug("device : " + repr(device))
                     return devices
@@ -161,10 +161,13 @@ class API:
                     LOGGER.error("Error on get_items_in_section_for_home. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
-    async def refresh_device(self, device): 
+    async def refresh_node(self, device): 
         """Update device details"""
+        node_info = await self.get_node(device.get("homeId"), device.get("nodeId"))
+        self.merge_properties(device, node_info)
         device_info = await self.get_device(device.get("deviceId"))
         self.merge_properties(device, device_info)
+
         if not device.get("isEnabled"):
             return device
 
@@ -214,7 +217,6 @@ class API:
                 if resp.status == 200:
                     response = await resp.json()
                     LOGGER.debug("get_node : " + str(response))
-                    #print("\t\t" + response["icon"] + " " + response["factoryId"] + " " + response["modelNumber"])
                     return response
 
                 else:
@@ -272,11 +274,12 @@ class API:
                     LOGGER.error("Error on get_light_details. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
-    async def change_light_state(self, home_id, node_id, parameter, value):
+    async def change_light_state(self, home_id, node_id, updated_values: dict):
         await self.check_connected()
         
         data = (await self.get_light_details(home_id, node_id))["lastReportedValue"]
-        data[parameter] = value
+        for parameter, value in updated_values.items():
+            data[parameter] = value
         
         async with aiohttp.ClientSession() as session, session.request(
             method="POST",

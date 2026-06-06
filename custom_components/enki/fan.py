@@ -115,7 +115,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
             return
 
         await self.coordinator.api.change_fan_speed(self.device["homeId"], self.node_id, 0)
-        self.coordinator.update_data(self.node_id, None, "fanSpeed", 0)
+        self.coordinator.update_data(self.node_id, {"fanSpeed": 0})
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set speed percentage."""
@@ -125,7 +125,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
         bounded = max(0, min(100, percentage))
         speed = round((bounded / 100) * self._max_fan_speed)
         await self.coordinator.api.change_fan_speed(self.device["homeId"], self.node_id, speed)
-        self.coordinator.update_data(self.node_id, None, "fanSpeed", speed)
+        self.coordinator.update_data(self.node_id, {"fanSpeed": speed})
 
     @property
     def current_direction(self) -> str | None:
@@ -149,7 +149,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
         await self.coordinator.api.change_fan_rotation_direction(
             self.device["homeId"], self.node_id, value
         )
-        self.coordinator.update_data(self.node_id, None, "fanRotationDirection", value)
+        self.coordinator.update_data(self.node_id, {"fanRotationDirection": value})
 
     @property
     def preset_mode(self) -> str | None:
@@ -173,7 +173,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
         await self.coordinator.api.change_airflow_mode(
             self.device["homeId"], self.node_id, preset_mode
         )
-        self.coordinator.update_data(self.node_id, None, "airflowMode", preset_mode)
+        self.coordinator.update_data(self.node_id, {"airflowMode": preset_mode})
 
 
 def _capabilities_set(device: dict[str, Any]) -> set[str]:
