@@ -68,9 +68,10 @@ class EnkiCoordinator(DataUpdateCoordinator):
     #
     # These will be specific to your api or yo may not need them at all
     # ----------------------------------------------------------------------------
-    def get_device(self, device_id: int) -> dict[str, Any]:
+    def get_device(self, device_id: str) -> dict[str, Any]:
         """Get a device entity from our api data using the device_id."""
         try:
+            LOGGER.debug(f"get_device for device_id {device_id}")
             return [
                 devices for devices in self.data if devices["deviceId"] == device_id
             ][0]
@@ -79,7 +80,7 @@ class EnkiCoordinator(DataUpdateCoordinator):
             # If api did not return any data, you will get TypeError.
             return None
         
-    def get_node(self, node_id: int) -> dict[str, Any]:
+    def get_node(self, node_id: str) -> dict[str, Any]:
         """Get a device entity from our api data using the node_id."""
         try:
             return [

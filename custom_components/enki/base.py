@@ -85,8 +85,9 @@ class EnkiBaseEntity(CoordinatorEntity):
         # Device identifiers should be unique, so use your integration name (DOMAIN)
         # and a device uuid, mac address or some other unique attribute.
         # ----------------------------------------------------------------------------
+        device_name = self.coordinator.get_device_parameter(self.node_id, "deviceName")
         return DeviceInfo(
-            name=self.coordinator.get_device_parameter(self.node_id, "deviceName"),
+            name=device_name,
             manufacturer=self.coordinator.get_device_parameter(self.node_id, "manufacturerId"),
             model=str(
                 self.coordinator.get_device_parameter(self.node_id, "modelNumber")
@@ -99,14 +100,14 @@ class EnkiBaseEntity(CoordinatorEntity):
             identifiers={
                 (
                     DOMAIN,
-                    self.coordinator.get_device_parameter(self.node_id, "node_Id"),
+                    self.node_id,
                 )
             },
         )
 
     @property
     def name(self) -> str:
-        """Return the name of the sensor."""
+        """Return the name of the device."""
         return self.parameter.replace("_", " ").title()
 
     @property
