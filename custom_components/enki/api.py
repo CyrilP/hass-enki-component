@@ -272,11 +272,11 @@ class API:
                     LOGGER.error("Error on get_light_details. status %s, response %s", resp.status, str(response))
                     raise ValueError("bad credentials")
 
-    async def change_light_state(self, home_id, node_id, parameter, value):
+    async def change_light_state(self, home_id, node_id, changes: dict):
         await self.check_connected()
         
         data = (await self.get_light_details(home_id, node_id))["lastReportedValue"]
-        data[parameter] = value
+        data.update(changes)
         
         async with aiohttp.ClientSession() as session, session.request(
             method="POST",

@@ -151,39 +151,19 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
 
         return False
 
-    def _optimistic_update_light_endpoint_power(self, power: str) -> None:
+    def update_data_power_light_endpoints(self, power: str) -> None:
         """Apply optimistic power to known light endpoints in coordinator cache."""
-        endpoint_ids = self._light_endpoint_ids()
-        if endpoint_ids:
-            for endpoint_id in endpoint_ids:
-                self.coordinator.update_endpoint_power(self.node_id, endpoint_id, power)
-            return
+        for endpoint_id in self._light_endpoint_ids():
+            self.coordinator.update_endpoint_power(self.node_id, endpoint_id, power)
 
-        if self._endpoint_id is not None:
-            self.coordinator.update_endpoint_power(self.node_id, self._endpoint_id, power)
-        else:
-            self.coordinator.update_data(self.node_id, "lastReportedValue", "power", power)
-
-    async def _turn_on_with_mixed_endpoint_workaround(self) -> None:
-        """Send OFF->ON when needed to force a fresh ON transition for all lights."""
+    async def _mixed_endpoint_workaround(self) -> None:
+        """Send OFF first when needed to force a fresh ON transition for all lights."""
         if self._light_endpoints_have_mixed_power():
             await self.coordinator.api.change_light_state(
                 self._device["homeId"],
                 self._device["nodeId"],
-                "power",
-                "OFF",
+                {"power": "OFF"},
             )
-            self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "OFF")
-            self._optimistic_update_light_endpoint_power("OFF")
-
-        await self.coordinator.api.change_light_state(
-            self._device["homeId"],
-            self._device["nodeId"],
-            "power",
-            "ON",
-        )
-        self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "ON")
-        self._optimistic_update_light_endpoint_power("ON")
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
@@ -193,20 +173,32 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         # all the lights but at least will not turn on the fan or other non-light endpoints.
         # Additional workaround: if the light endpoints are in mixed state (one ON, another OFF),
         # force an OFF->ON transition so turn_on is not ignored when global power is already ON.
-        await self._turn_on_with_mixed_endpoint_workaround()
+        await self._mixed_endpoint_workaround()
 
+        changes: dict[str, Any] = {"power": "ON"}
         if "brightness" in kwargs:
             ha_value = kwargs["brightness"]
-            value = round(ha_value / (255/self.BRIGHTNESS_SCALE[1]), 2)
-            LOGGER.debug(f"setting brightness value to {ha_value} => {value}")
-            await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "brightness", value)
-            self.coordinator.update_data(self.node_id, "lastReportedValue", "brightness", value)
-        elif "color_temp_kelvin" in kwargs:
+            changes["brightness"] = round(ha_value / (255/self.BRIGHTNESS_SCALE[1]), 2)
+            LOGGER.debug(f"setting brightness value to {ha_value} => {changes['brightness']}")
+
+        if "color_temp_kelvin" in kwargs:
             ha_value = kwargs["color_temp_kelvin"]
             value = self.closest_temp_value(ha_value)
             LOGGER.debug("setting color temp to closest value : " + str(ha_value) + " => " + str(value))
-            await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "colorTemperature", "T" + str(value) + "K")
-            self.coordinator.update_data(self.node_id, "lastReportedValue", "colorTemperature", "T" + str(value) + "K")
+            changes["colorTemperature"] = "T" + str(value) + "K"
+
+        await self.coordinator.api.change_light_state(
+            self._device["homeId"],
+            self._device["nodeId"],
+            changes,
+        )
+
+        self.update_data_power_light_endpoints("ON")
+        self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "ON")        
+        if "brightness" in changes:
+            self.coordinator.update_data(self.node_id, "lastReportedValue", "brightness", changes["brightness"])
+        if "colorTemperature" in changes:
+            self.coordinator.update_data(self.node_id, "lastReportedValue", "colorTemperature", changes["colorTemperature"])
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
@@ -214,9 +206,10 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         # Until the API supports per-endpoint control without side-effects, use change_light_state
         # for all light entities regardless of whether they have an endpoint_id. This will turn off
         # all the lights but at least will not turn off the fan or other non-light endpoints.
-        await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], "power", "OFF")
-        self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "OFF")
-        self._optimistic_update_light_endpoint_power("OFF")
+        await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], {"power": "OFF"})
+
+        self.update_data_power_light_endpoints("OFF")
+        self.coordinator.update_data(self.node_id, "lastReportedValue", "power", "OFF")        
 
     @property
     def brightness(self) -> Optional[int]:
