@@ -98,8 +98,6 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
                 self._attr_max_color_temp_kelvin=DEFAULT_MAX_KELVIN
 
         if "change_brightness" in capabilities:
-            if len(self._attr_supported_color_modes) == 0:
-                self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
             if self._attr_color_mode is None:
                 self._attr_color_mode = ColorMode.BRIGHTNESS
 
@@ -109,6 +107,13 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
                 self._attr_color_mode = ColorMode.ONOFF
 
         if len(self._attr_supported_color_modes) > 1:
+            if ColorMode.COLOR_TEMP in self._attr_supported_color_modes and device.get('lastReportedValue', {}).get('colorMode') == 'hs':
+                self._attr_color_mode = ColorMode.COLOR_TEMP
+                
+            if ColorMode.HS in self._attr_supported_color_modes and device.get('lastReportedValue', {}).get('colorMode') == 'ct':
+                self._attr_color_mode = ColorMode.HS
+
+        if self._attr_color_mode is None:
             self._attr_color_mode = ColorMode.UNKNOWN
 
     @property
@@ -201,8 +206,8 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         changes: dict[str, Any] = {"power": "ON"}
         if "brightness" in kwargs:
             ha_value = kwargs["brightness"]
-            value = math.ceil(brightness_to_value(self.BRIGHTNESS_SCALE, ha_value))
-            LOGGER.debug(f"setting brightness value to {ha_value} => {value}")
+            value = round(ha_value / 255, 2)
+            LOGGER.debug(f"setting brightness value to {ha_value} => {value}, scale {self.BRIGHTNESS_SCALE}")
             changes["brightness"] = value
         
         if "color_temp_kelvin" in kwargs:
@@ -212,6 +217,7 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
             LOGGER.debug("setting color temp to closest value : " + str(ha_value) + " => " + str(value))
             changes["colorMode"] = new_color_mode
             changes["colorTemperature"] = "T" + str(value) + "K"
+            self._attr_color_mode = ColorMode.COLOR_TEMP
         elif "hs_color" in kwargs:
             new_color_mode = 'hs'
             LOGGER.debug(f"setting hue to {kwargs['hs_color'][0]} and saturation to {kwargs['hs_color'][1]}")
@@ -223,6 +229,7 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
             changes["colorMode"] = new_color_mode
             changes["hue"] = hue_value
             changes["saturation"] = saturation_value
+            self._attr_color_mode = ColorMode.HS
 
         self.update_data_power_light_endpoints("ON")
         await self.coordinator.api.change_light_state(self._device["homeId"], self._device["nodeId"], changes)
@@ -241,9 +248,12 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
     @property
     def brightness(self) -> Optional[int]:
         """Return the current brightness."""
+        
         last_reported_values = self.coordinator.get_device_parameter(self.node_id, "lastReportedValue")
         if "brightness" not in last_reported_values:
+            LOGGER.debug("brightness not found in last_reported_values")
             return None
+        LOGGER.debug(f"brightness found in last_reported_values : {last_reported_values['brightness']} => {value_to_brightness(self.BRIGHTNESS_SCALE, last_reported_values['brightness'])}")
         return value_to_brightness(self.BRIGHTNESS_SCALE, last_reported_values["brightness"])
     
     @property
@@ -264,6 +274,9 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         saturation = last_reported_values["saturation"] *(100/self.SATURATION_SCALE[1])
         return (hue, saturation)
 
+    @property
+    def supported_color_modes(self):
+        return self._attr_supported_color_modes
 
 def _build_light_entities(coordinator: EnkiCoordinator, device: dict[str, Any]) -> list[LightEntity]:
     """Create light entities from power capability and BFF endpoint metadata."""
