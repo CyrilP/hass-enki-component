@@ -53,6 +53,16 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         self._attr_color_mode = None
 
         capabilities = _capabilities_set(device)
+
+        # Some devices (e.g. Edisio Wi-Fi plugs/outlets) only expose
+        # switch_electrical_power / check_electrical_power and do not support
+        # change_light_state / check_light_state at all. For those devices we
+        # must use the power API (switch_electrical_power) instead of the
+        # lighting API (change_light_state) to change or read their state.
+        self._supports_light_state = bool(
+            {"change_light_state", "check_light_state"} & capabilities
+        )
+
         if "possibleValues" in device and "change_brightness" in device["possibleValues"]:
             min_value = device["possibleValues"]["change_brightness"]["range"]["min"]
             max_value = device["possibleValues"]["change_brightness"]["range"]["max"]
@@ -110,7 +120,16 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
         last_reported_values = self.coordinator.get_device_parameter(self.node_id, "lastReportedValue")
         if isinstance(last_reported_values, dict):
             power = last_reported_values.get("power")
-            return power == "ON" if power is not None else None
+            if power is not None:
+                return power == "ON"
+
+        # Fallback for pure switch/outlet devices (e.g. Edisio Wi-Fi plugs)
+        # that report their state via switch_electrical_power /
+        # check_electrical_power instead of change_light_state.
+        electrical_power = self.coordinator.get_device_parameter(self.node_id, "electricalPower")
+        if isinstance(electrical_power, str) and electrical_power in ("ON", "OFF"):
+            return electrical_power == "ON"
+
         return None
 
     def closest_temp_value(self, target_value):
@@ -187,6 +206,16 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        if not self._supports_light_state:
+            # Pure switch/outlet devices (e.g. Edisio Wi-Fi plugs) do not
+            # support change_light_state/check_light_state. Use the power
+            # API (switch_electrical_power) instead of the lighting API.
+            await self.coordinator.api.switch_electrical_power(
+                self._device["homeId"], self._device["nodeId"], "ON"
+            )
+            self.coordinator.update_data(self.node_id, None, "electricalPower", "ON")
+            return
+
         # TODO: switch_electrical_power turns on ALL endpoints of the device (lights, fan, etc).
         # Until the API supports per-endpoint control without side-effects, use change_light_state
         # for all light entities regardless of whether they have an endpoint_id. This will turn on
@@ -210,6 +239,14 @@ class EnkiLight(EnkiBaseEntity, LightEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
+        if not self._supports_light_state:
+            # See async_turn_on: pure switch/outlet devices use the power API.
+            await self.coordinator.api.switch_electrical_power(
+                self._device["homeId"], self._device["nodeId"], "OFF"
+            )
+            self.coordinator.update_data(self.node_id, None, "electricalPower", "OFF")
+            return
+
         # TODO: switch_electrical_power turns off ALL endpoints of the device (lights, fan, etc).
         # Until the API supports per-endpoint control without side-effects, use change_light_state
         # for all light entities regardless of whether they have an endpoint_id. This will turn off
