@@ -42,6 +42,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
 
     _attr_supported_features = FanEntityFeature(0)
     _attr_preset_modes: list[str] = []
+    _attr_speed_count: int | None = None
 
     def __init__(self, coordinator: EnkiCoordinator, device: dict[str, Any], parameter: str) -> None:
         super().__init__(coordinator, device, parameter)
@@ -59,6 +60,7 @@ class EnkiFan(EnkiBaseEntity, FanEntity):
         self._attr_supported_features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
         if self._supports_speed:
             self._attr_supported_features |= FanEntityFeature.SET_SPEED
+            self._attr_speed_count = self._max_fan_speed
         if self._supports_direction:
             self._attr_supported_features |= FanEntityFeature.DIRECTION
         if self._supports_preset_mode:
