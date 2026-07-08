@@ -1,18 +1,24 @@
 # hass-enki-component
 
-Enki custom component for Home Assistant
+> **Development has moved.** Active maintenance continues at **[cyrilcolinet/enki-integration-hass](https://github.com/cyrilcolinet/enki-integration-hass)**.
+>
+> This repository is the original Enki integration for Home Assistant. If you still use it, switch to the canonical repo — same domain (`enki`), same folder (`custom_components/enki`). Update via HACS or copy files from a [release](https://github.com/cyrilcolinet/enki-integration-hass/releases), then restart Home Assistant. Do not uninstall the integration.
+>
+> Migration guide: [docs/MIGRATION.md](https://github.com/cyrilcolinet/enki-integration-hass/blob/main/docs/MIGRATION.md) (available after [PR #62](https://github.com/cyrilcolinet/enki-integration-hass/pull/62) is released).
+>
+> Discussion: [issue #78](https://github.com/CyrilP/hass-enki-component/issues/78)
 
-Tested devices:
+---
+
+## History
+
+First Enki custom component for Home Assistant — started by [@CyrilP](https://github.com/CyrilP) for an Eglo V-link lamp, then extended by contributors (Radix fan, Envertech solar, Cadix fan, …).
+
+**Originally tested devices:**
 - Eglo V-link tunable white
 - Inspire Radix ceiling fan with light
-- NEW! Solar Panels by Envertech-Lexman
+- Solar Panels by Envertech-Lexman
 - Inspire Cadix ceiling fan with light
-
-Howto :
-
-- install HACS
-- add this repo
-- add Enki integration
 
 ## Live API test
 
@@ -39,3 +45,5 @@ export ENKI_USER="your-email@example.com"
 export ENKI_PASSWORD="your-password"
 python tools/enki_api_live.py
 ```
+
+The maintained fork keeps an equivalent tool under `tools/enki_api_live.py`.
