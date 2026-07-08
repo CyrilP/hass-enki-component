@@ -1,0 +1,8 @@
+{
+  "issues": {
+    "integration_moved": {
+      "title": "This Enki integration is deprecated",
+      "description": "Development continues at {repo_url}. Update via HACS to the canonical repo (same domain `enki`) — do not uninstall the integration. Migration guide: {migration_url}"
+    }
+  }
+}

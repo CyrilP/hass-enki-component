@@ -8,9 +8,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .const import DOMAIN
 from .coordinator import EnkiCoordinator
 
 #PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
@@ -25,6 +27,29 @@ class RuntimeData:
 
 
 EnkiConfigEntry = ConfigEntry[RuntimeData]
+
+CANONICAL_REPO_URL = "https://github.com/cyrilcolinet/enki-integration-hass"
+MIGRATION_GUIDE_URL = (
+    "https://github.com/cyrilcolinet/enki-integration-hass/blob/main/docs/MIGRATION.md"
+)
+DEPRECATED_ISSUE_ID = "integration_moved"
+
+
+def _create_deprecated_issue(hass: HomeAssistant) -> None:
+    """Surface deprecation in Settings → Repairs and on the integration card."""
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        DEPRECATED_ISSUE_ID,
+        is_fixable=False,
+        issue_domain=DOMAIN,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=DEPRECATED_ISSUE_ID,
+        translation_placeholders={
+            "repo_url": CANONICAL_REPO_URL,
+            "migration_url": MIGRATION_GUIDE_URL,
+        },
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: EnkiConfigEntry) -> bool:
@@ -59,6 +84,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: EnkiConfigEntry) 
     # Setup platforms (based on the list of entity types in PLATFORMS defined above)
     # This calls the async_setup method in each of your entity type files.
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+
+    _create_deprecated_issue(hass)
 
     # Return true to denote a successful setup.
     return True
