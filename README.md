@@ -1,5 +1,15 @@
 # hass-enki-component
 
+This repository is now archived.
+
+I started this project just to manage my eglo lamp, I don't have anything more from the enki ecosystem and it's not easy to maintain because of my limited device range and lack of time.
+
+I agreed with [@cyrilcolinet](https://github.com/cyrilcolinet) to move the now "official" integration to his repository https://github.com/cyrilcolinet/enki-integration-hass
+
+So Long, and Thanks for All the Fish
+
+---
+
 Enki custom component for Home Assistant
 
 Tested devices:
